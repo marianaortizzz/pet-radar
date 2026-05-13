@@ -4,6 +4,7 @@ import { EmailModule } from './email/email.module';
 import { LostPetsModule } from './lost-pets/lost-pets.module';
 import { FoundPetsModule } from './found-pets/found-pets.module';
 import { dataSourceOptions } from './core/db/data-source';
+import { CacheModule } from './cache/cache.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { dataSourceOptions } from './core/db/data-source';
     EmailModule,
     LostPetsModule,
     FoundPetsModule,
+    CacheModule,
   ],
 })
 export class AppModule {}

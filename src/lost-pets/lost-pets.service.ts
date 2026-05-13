@@ -3,12 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LostPet } from 'src/core/entities/lost-pet.entity';
 import { CreateLostPetDto } from 'src/core/models/create-lost-pet.dto';
+import { CacheService } from 'src/cache/cache.service';
+
+const CACHE_KEY_ACTIVE_LOST_PETS = 'lost-pets:active';
 
 @Injectable()
 export class LostPetsService {
   constructor(
     @InjectRepository(LostPet)
     private readonly lostPetRepository: Repository<LostPet>,
+    private readonly cacheService: CacheService,
   ) {}
 
   async create(dto: CreateLostPetDto): Promise<LostPet> {
@@ -30,7 +34,26 @@ export class LostPetsService {
       address: dto.address,
       lost_date: dto.lost_date,
     });
-    return this.lostPetRepository.save(newPet);
+    const saved = await this.lostPetRepository.save(newPet);
+    await this.cacheService.delete(CACHE_KEY_ACTIVE_LOST_PETS);
+    return saved;
+  }
+
+  async findAllActive(): Promise<LostPet[]> {
+    try {
+      const cached = await this.cacheService.get<LostPet[]>(CACHE_KEY_ACTIVE_LOST_PETS);
+      if (cached && cached.length > 0) {
+        return cached;
+      }
+      const result = await this.lostPetRepository.find({
+        where: { is_active: true },
+      });
+      await this.cacheService.set(CACHE_KEY_ACTIVE_LOST_PETS, result);
+      return result;
+    } catch (error) {
+      console.error('[LostPetsService] Error fetching active lost pets:', error);
+      return [];
+    }
   }
 
   async findNearby(lat: number, lon: number, radiusInMeters: number = 500): Promise<LostPet[]> {

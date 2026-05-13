@@ -10,5 +10,32 @@ services:
     volumes:
       - petradardb_data:/var/lib/postgresql
 
+  redis:
+    image: redis
+    container_name: pet-radar-redis
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_db:/data
+
+  pet-radar-api:
+    image: ${DOCKER_IMAGE:-ghcr.io/marianaortizzz/pet-radar}:latest
+    container_name: pet-radar-api
+    ports:
+      - 3002:3002
+    environment:
+      - PORT=3002
+      - DB_HOST=postgres
+      - DB_NAME=petradardb
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+
 volumes:
   petradardb_data:
+  redis_db:

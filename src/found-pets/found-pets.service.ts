@@ -8,6 +8,9 @@ import { LostPetsService } from 'src/lost-pets/lost-pets.service';
 import { EmailService } from 'src/email/email.service';
 import { generateFoundPetEmailTemplate } from './templates/found-pet.template';
 import { EmailOptions } from 'src/core/models/email-options.model';
+import { CacheService } from 'src/cache/cache.service';
+
+const CACHE_KEY_ALL_FOUND_PETS = 'found-pets:all';
 
 @Injectable()
 export class FoundPetsService {
@@ -16,6 +19,7 @@ export class FoundPetsService {
     private readonly foundPetRepository: Repository<FoundPet>,
     private readonly lostPetsService: LostPetsService,
     private readonly emailService: EmailService,
+    private readonly cacheService: CacheService,
   ) {}
 
   async create(dto: CreateFoundPetDto): Promise<FoundPet> {
@@ -38,6 +42,7 @@ export class FoundPetsService {
     });
 
     const savedFoundPet = await this.foundPetRepository.save(newFoundPet);
+    await this.cacheService.delete(CACHE_KEY_ALL_FOUND_PETS);
 
     console.log('[FoundPetsService] Searching for nearby lost pets within 500m...');
     const nearbyLostPets = await this.lostPetsService.findNearby(dto.lat, dto.lon, 500);
@@ -48,6 +53,21 @@ export class FoundPetsService {
     }
 
     return savedFoundPet;
+  }
+
+  async findAll(): Promise<FoundPet[]> {
+    try {
+      const cached = await this.cacheService.get<FoundPet[]>(CACHE_KEY_ALL_FOUND_PETS);
+      if (cached && cached.length > 0) {
+        return cached;
+      }
+      const result = await this.foundPetRepository.find();
+      await this.cacheService.set(CACHE_KEY_ALL_FOUND_PETS, result);
+      return result;
+    } catch (error) {
+      console.error('[FoundPetsService] Error fetching found pets:', error);
+      return [];
+    }
   }
 
   private async notifyOwner(
