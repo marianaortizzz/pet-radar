@@ -4,6 +4,8 @@ export class CreatePetTables1000000000000 implements MigrationInterface {
   name = 'CreatePetTables1000000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS postgis`);
+
     await queryRunner.query(`
       CREATE TABLE "lost_pets" (
         "id" SERIAL NOT NULL,
